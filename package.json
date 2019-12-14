@@ -5,9 +5,13 @@
 	"license": "MIT",
 	"scripts": {
 		"dev": "webpack-dev-server --mode development",
-		"build:dev": "webpack --mode development"
+		"build:dev": "webpack --mode development",
+		"test": "jest"
 	},
 	"devDependencies": {
+		"@types/jest": "^24.0.23",
+		"jest": "^24.9.0",
+		"ts-jest": "^24.2.0",
 		"ts-loader": "^6.2.1",
 		"typescript": "^3.7.3",
 		"webpack": "^4.41.2",
