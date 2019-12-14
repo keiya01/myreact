@@ -1,3 +1,19 @@
+let nextUnitOfWork = null;
+const workLoop = deadline => {
+	let shouldYeild = false;
+	while (nextUnitOfWork && !shouldYeild) {
+		nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+		shouldYeild = deadline.timeRemaining() < 1;
+	}
+	requestIdleCallback(workLoop);
+};
+
+requestIdleCallback(workLoop);
+
+const performUnitOfWork = nextUnitOfWork => {
+	// TODO
+};
+
 const createTextElement = text => {
 	return {
 		type: "TEXT_ELEMENT",
