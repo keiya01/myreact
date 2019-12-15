@@ -148,9 +148,44 @@ const updateHostComponent = fiber => {
 	reconcileChild(fiber, elements);
 };
 
+let wipFiber = null;
+let hookIndex = null;
 const updateFunctionComponent = fiber => {
+	wipFiber = fiber;
+	hookIndex = 0;
+	wipFiber.hooks = [];
 	const children = [fiber.type(fiber.props)];
 	reconcileChild(fiber, children);
+};
+
+const useState = initial => {
+	const oldHook = wipFiber.alternate && wipFiber.alternate.hooks && wipFiber.alternate.hooks[hookIndex];
+
+	const hook = {
+		state: oldHook ? oldHook.state : initial,
+		queue: []
+	};
+
+	const actions = oldHook ? oldHook.queue : [];
+	actions.map(action => {
+		hook.state = action instanceof Function ? action(hook.state) : action;
+	});
+
+	const setState = action => {
+		hook.queue.push(action);
+		wipRoot = {
+			dom: currentRoot.dom,
+			props: currentRoot.props,
+			alternate: currentRoot
+		};
+		nextUnitOfWork = wipRoot;
+		deletions = [];
+	};
+
+	wipFiber.hooks.push(hook);
+	++hookIndex;
+
+	return [hook.state, setState];
 };
 
 const performUnitOfWork = fiber => {
@@ -179,7 +214,7 @@ const reconcileChild = (wipFiber, elements) => {
 	let oldFiber = wipFiber.alternate ? wipFiber.alternate.child : null;
 	let prevSibling = null;
 
-	while (index < elements.length || oldFiber !== null) {
+	while (index < elements.length || oldFiber != null) {
 		const element = elements[index];
 		const newFiber = null;
 
@@ -210,9 +245,13 @@ const reconcileChild = (wipFiber, elements) => {
 			deletions.push(oldFiber);
 		}
 
+		if (oldFiber) {
+      oldFiber = oldFiber.sibling;
+		}
+
 		if (index === 0) {
 			wipFiber.child = newFiber;
-		} else {
+		} else if (element) {
 			prevSibling.sibling = newFiber;
 		}
 
@@ -225,5 +264,6 @@ requestIdleCallback(workLoop);
 
 export default {
 	createElement,
-	render
+	render,
+	useState
 };
