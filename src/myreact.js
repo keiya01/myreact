@@ -48,8 +48,18 @@ const render = (element, container) => {
 	deletions = [];
 };
 
+const isEvent = key => key.startsWith("on");
+
+const addEvent = (props, dom) => {
+	Object.keys(props)
+		.filter(isEvent)
+		.map(key => {
+			const eventType = key.toLowerCase().substring(2);
+			dom.addEventListener(eventType, props[key]);
+		});
+};
+
 const updateDOM = (dom, prevProps, nextProps) => {
-	const isEvent = key => key.startsWith("on");
 	const isProperty = key => key !== "children";
 	const isNew = (prev, next) => key => prev[key] !== next[key];
 
@@ -81,15 +91,7 @@ const updateDOM = (dom, prevProps, nextProps) => {
 			dom[key] = nextProps[key];
 		});
 
-	// Add event listener
-	Object.keys(nextProps)
-		.filter(key => {
-			return isEvent(key) && isNew(prevProps, nextProps)(key);
-		})
-		.map(key => {
-			const eventType = key.toLowerCase().substring(2);
-			dom.addEventListener(eventType, nextProps[key]);
-		});
+	addEvent(nextProps, dom);
 };
 
 const commitWork = fiber => {
@@ -104,14 +106,7 @@ const commitWork = fiber => {
 	const domParent = domParentFiber.dom;
 
 	if (fiber.effectTag === "PLACEMENT" && fiber.dom !== null) {
-		Object.keys(fiber.props)
-			.filter(key => {
-				return key.startsWith("on");
-			})
-			.map(key => {
-				const eventType = key.toLowerCase().substring(2);
-				fiber.dom.addEventListener(eventType, fiber.props[key]);
-			});
+		addEvent(fiber.props, fiber.dom);
 		domParent.appendChild(fiber.dom);
 	} else if (fiber.effectTag === "UPDATE" && fiber.dom !== null) {
 		updateDOM(fiber.dom, fiber.alternate.props, fiber.props);
