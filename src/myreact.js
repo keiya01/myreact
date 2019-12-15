@@ -97,8 +97,21 @@ const commitWork = fiber => {
 		return;
 	}
 
-	const domParent = fiber.parent.dom;
+	let domParentFiber = fiber.parent;
+	while (!domParentFiber.dom) {
+		domParentFiber = domParentFiber.parent;
+	}
+	const domParent = domParentFiber.dom;
+
 	if (fiber.effectTag === "PLACEMENT" && fiber.dom !== null) {
+		Object.keys(fiber.props)
+			.filter(key => {
+				return key.startsWith("on");
+			})
+			.map(key => {
+				const eventType = key.toLowerCase().substring(2);
+				fiber.dom.addEventListener(eventType, fiber.props[key]);
+			});
 		domParent.appendChild(fiber.dom);
 	} else if (fiber.effectTag === "UPDATE" && fiber.dom !== null) {
 		updateDOM(fiber.dom, fiber.alternate.props, fiber.props);
@@ -131,13 +144,26 @@ const workLoop = deadline => {
 	requestIdleCallback(workLoop);
 };
 
-const performUnitOfWork = fiber => {
+const updateHostComponent = fiber => {
 	if (!fiber.dom) {
 		fiber.dom = createDOM(fiber);
 	}
 
 	const elements = fiber.props.children;
 	reconcileChild(fiber, elements);
+};
+
+const updateFunctionComponent = fiber => {
+	const children = [fiber.type(fiber.props)];
+	reconcileChild(fiber, children);
+};
+
+const performUnitOfWork = fiber => {
+	if (fiber.type instanceof Function) {
+		updateFunctionComponent(fiber);
+	} else {
+		updateHostComponent(fiber);
+	}
 
 	if (fiber.child) {
 		return fiber.child;
